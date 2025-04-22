@@ -1,21 +1,41 @@
 <?php
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
 include 'db.php';
 
-// make sure we got a valid ID
 if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $id = (int) $_GET['id'];
 
-    // delete the note — gone forever (unless you back up, which you don’t)
-    $stmt = $conn->prepare("DELETE FROM notes WHERE id = ?");
+    // Step 1: Get the note first
+    $stmt = $conn->prepare("SELECT * FROM notes WHERE id = ?");
     $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-    if ($stmt->execute()) {
-        // success. back to main.
-        header("Location: index.php");
-        exit();
+    if ($note = $result->fetch_assoc()) {
+        // Step 2: Ownership check
+        if ($note['user_id'] !== $_SESSION['user_id']) {
+            echo "Access denied. Nice try, but that note’s not yours.";
+            exit();
+        }
+
+        // Step 3: Now delete it
+        $stmt = $conn->prepare("DELETE FROM notes WHERE id = ?");
+        $stmt->bind_param("i", $id);
+
+        if ($stmt->execute()) {
+            header("Location: index.php");
+            exit();
+        } else {
+            echo "Failed to delete. The note resists.";
+        }
     } else {
-        echo "Error deleting note. It's still here. Sorry.";
+        echo "Note not found.";
     }
 } else {
-    echo "Invalid note ID. Nothing deleted. Move along.";
+    echo "Invalid note ID.";
 }

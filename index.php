@@ -1,4 +1,11 @@
-<?php include 'db.php'; ?>
+<?php
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+include 'db.php';
+?>
 
 <!DOCTYPE html>
 <html>
@@ -9,7 +16,8 @@
 <body>
 
     <h1>CRUDdyNotes</h1>
-    <p><em>yes. you can write notes. no, there's no dark mode.</em></p>
+    <p><em>Logged in as <strong><?= htmlspecialchars($_SESSION['username']) ?></strong></em> |
+    <a href="logout.php">Logout</a></p>
 
     <hr>
 
@@ -24,8 +32,12 @@
 
     <h2>All Notes</h2>
     <?php
-    // get the notes from the db in reverse-chronological order because recency bias is real
-    $result = $conn->query("SELECT * FROM notes ORDER BY created_at DESC");
+$user_id = $_SESSION['user_id'];
+$stmt = $conn->prepare("SELECT * FROM notes WHERE user_id = ? ORDER BY created_at DESC");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+
     while ($row = $result->fetch_assoc()):
     ?>
         <div class="note">

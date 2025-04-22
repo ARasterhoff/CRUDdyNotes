@@ -1,25 +1,33 @@
 <?php
-// db connection time. don't forget to include this or nothing works.
+// Start session and require login
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
 include 'db.php';
 
-// basic POST check — is someone trying to submit a new note?
+// Check if the request is a POST — aka someone hit submit
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    // escape inputs to avoid SQL injection, even if it's local — good habit!
+    // Escape those inputs because you don’t want random SQL monsters
     $title = $conn->real_escape_string($_POST['title']);
     $content = $conn->real_escape_string($_POST['content']);
 
-    // insert the new note into the database
-    $sql = "INSERT INTO notes (title, content) VALUES ('$title', '$content')";
+    // Insert the new note into the database
+    $user_id = $_SESSION['user_id'];
+    $sql = "INSERT INTO notes (user_id, title, content) VALUES ('$user_id', '$title', '$content')";
+    
 
     if ($conn->query($sql) === TRUE) {
-        // success! now go back to the homepage
+        // Success! Back to homepage to admire our handiwork
         header("Location: index.php");
         exit();
     } else {
-        // something broke. shrug.
+        // Welp. That didn’t work.
         echo "Error: " . $conn->error;
     }
 } else {
-    // someone tried to access this page directly with GET — nope.
+    // Someone tried to GET this page? Nah.
     echo "Nothing to see here.";
 }

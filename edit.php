@@ -1,11 +1,18 @@
 <?php
+// Session check for the sacred right to edit
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
 include 'db.php';
 
 if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $id = (int) $_GET['id'];
 
-    // form was submitted? let's update the note.
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // Form submitted, time to update the note
         $title = $conn->real_escape_string($_POST['title']);
         $content = $conn->real_escape_string($_POST['content']);
 
@@ -16,16 +23,21 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
             header("Location: index.php");
             exit();
         } else {
-            echo "Error updating note. Sad trombone.";
+            echo "Error updating note.";
         }
     } else {
-        // no form yet — fetch the note to populate the form fields
+        // Get note info to pre-fill the form
         $stmt = $conn->prepare("SELECT * FROM notes WHERE id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $result = $stmt->get_result();
 
-        if ($note = $result->fetch_assoc()):
+        if ($note = $result->fetch_assoc()) {
+            if ($note['user_id'] !== $_SESSION['user_id']) {
+                echo "Access denied. You can't edit someone else's poetry.";
+                exit();
+            }
+        
 ?>
 
 <!DOCTYPE html>
@@ -50,9 +62,9 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
 
 <?php
         else:
-            echo "Note not found. It ghosted you.";
+            echo "Note not found. You sure it existed?";
         endif;
     }
 } else {
-    echo "Invalid note ID. No soup for you.";
+    echo "Invalid note ID.";
 }

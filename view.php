@@ -1,16 +1,27 @@
 <?php
+// Optional login protection — remove if you want public viewing
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
 include 'db.php';
 
 if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $id = (int) $_GET['id'];
-    
-    // get the note that matches the ID
+
     $stmt = $conn->prepare("SELECT * FROM notes WHERE id = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $result = $stmt->get_result();
 
     if ($note = $result->fetch_assoc()):
+        if ($note['user_id'] !== $_SESSION['user_id']) {
+            echo "Access denied. That's not your note.";
+            exit();
+        }
+        
 ?>
 
 <!DOCTYPE html>
@@ -35,8 +46,8 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
 
 <?php
     else:
-        echo "Note not found. Maybe it ran away.";
+        echo "Note not found. Maybe it got deleted?";
     endif;
 } else {
-    echo "Invalid note ID. You can't just guess numbers, hacker.";
+    echo "Invalid note ID.";
 }
