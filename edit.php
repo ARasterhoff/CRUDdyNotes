@@ -1,5 +1,5 @@
 <?php
-// Session check for the sacred right to edit
+// Start session and protect the page from unauthorized access
 session_start();
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
@@ -8,36 +8,38 @@ if (!isset($_SESSION['user_id'])) {
 
 include 'db.php';
 
+// Check if a valid note ID is passed
 if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $id = (int) $_GET['id'];
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        // Form submitted, time to update the note
+        // Form was submitted — time to update the note
         $title = $conn->real_escape_string($_POST['title']);
         $content = $conn->real_escape_string($_POST['content']);
 
-        $stmt = $conn->prepare("UPDATE notes SET title = ?, content = ? WHERE id = ?");
-        $stmt->bind_param("ssi", $title, $content, $id);
+        // Always update only the current user's note
+        $stmt = $conn->prepare("UPDATE notes SET title = ?, content = ? WHERE id = ? AND user_id = ?");
+        $stmt->bind_param("ssii", $title, $content, $id, $_SESSION['user_id']);
 
         if ($stmt->execute()) {
             header("Location: index.php");
             exit();
         } else {
-            echo "Error updating note.";
+            echo "Error updating note. Server is moody.";
         }
     } else {
-        // Get note info to pre-fill the form
+        // Load the note data to pre-fill the form
         $stmt = $conn->prepare("SELECT * FROM notes WHERE id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $result = $stmt->get_result();
 
         if ($note = $result->fetch_assoc()) {
+            // Ownership check — don't let users edit someone else's note
             if ($note['user_id'] !== $_SESSION['user_id']) {
-                echo "Access denied. You can't edit someone else's poetry.";
+                echo "Access denied. This note is not yours, sneaky one.";
                 exit();
             }
-        
 ?>
 
 <!DOCTYPE html>
@@ -61,9 +63,9 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
 </html>
 
 <?php
-        else:
-            echo "Note not found. You sure it existed?";
-        endif;
+        } else {
+            echo "Note not found. Did it ever exist?";
+        }
     }
 } else {
     echo "Invalid note ID.";

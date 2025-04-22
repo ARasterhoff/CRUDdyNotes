@@ -19,7 +19,9 @@ a {
 }
 
 form input[type="text"],
+form input[type="password"],
 form textarea {
+
     width: 100%;
     padding: 10px;
     font-family: inherit;
@@ -53,3 +55,4 @@ hr {
     border-top: 1px dashed #000;
     margin: 30px 0;
 }
+
